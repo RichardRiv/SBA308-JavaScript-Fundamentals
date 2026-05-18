@@ -93,30 +93,87 @@ const isCourseIdMatched = (course, ag) => {
 	}
 };
 
-function getLearnerData(course, ag, submissions) {
-	let isForSameCourse = isCourseIdMatched(course, ag);
+const filterByPassedDueDate = (ag) => {
+	let date = new Date();
+	return ag.assignments.filter((obj) => date >= new Date(obj.due_at));
+};
 
-	if (isForSameCourse) {
-		let rel = {};
-		for (let sub of submissions) {
-			let lid = sub.learner_id;
-			if (!rel[lid]) rel[lid] = [];
+const groupDataByLid = (submissions, ag) => {
+	let filteredAssignments = filterByPassedDueDate(ag);
+	let rel = {};
 
-			rel[lid].push(sub);
+	for (let sub of submissions) {
+		let lid = sub.learner_id;
+		if (!rel[lid]) rel[lid] = [];
+
+		for (let fa of filteredAssignments) {
+			if (sub.assignment_id === fa.id) rel[lid].push(sub);
 		}
-		console.log(rel);
 	}
 
-	/**
-	 * obj = [
-	 *   {
-	 *     125: [{sub details}, {sub details}, {sub details}]
-	 *   },
-	 *   {
-	 *     132: [{sub details}, {sub details}]
-	 *   }
-	 * ]
-	 */
+	return rel;
+};
+
+const convertToObjects = (ag) => {
+	const filteredAssignments = filterByPassedDueDate(ag);
+	let assignmentsObject = {};
+
+	for (let obj of filteredAssignments) {
+		assignmentsObject[obj.id] = obj;
+	}
+
+	return assignmentsObject;
+};
+
+function getLearnerData(course, ag, submissions) {
+	const isForSameCourse = isCourseIdMatched(course, ag);
+
+	if (isForSameCourse) {
+		const filteredAssignments = groupDataByLid(submissions, ag);
+		const filteredAssignmentsObj = convertToObjects(AssignmentGroup);
+
+		let res = [];
+		for (let learner in filteredAssignments) {
+			let learnerObj = { id: Number(learner) };
+			let average = 0;
+			let pointsPossible = 0;
+
+			for (let obj of filteredAssignments[learner]) {
+				let assignment = filteredAssignmentsObj[obj.assignment_id];
+				let score = obj.submission.score;
+				let isLate =
+					new Date(obj.submission.submitted_at) > new Date(assignment.due_at);
+				// console.log(isLate);
+
+				if (isLate) score -= assignment.points_possible * 0.1;
+
+				learnerObj[assignment.id] = score / assignment.points_possible;
+
+				average += score;
+				pointsPossible += assignment.points_possible;
+
+				// console.log(assignment);
+				// console.log('========================================');
+				// console.log(obj);
+
+				// break;
+			}
+			learnerObj['avg'] = average / pointsPossible;
+			console.log(learnerObj);
+
+			break;
+		}
+
+		/**
+		 * obj = {
+		 *   id: learner_id,
+		 *   avg: (submission.score + submission.score) / (ag.a.pts_possible + ag.a.pts_possible)
+		 *   ag.a.id: submission.score / ag.a.pts_possible
+		 *   ag.a.id: submission.score / ag.a.pts_possible
+		 *   ag.a.id: (submission.score - 10%) / ag.a.pts_possible IF LATE
+		 * }
+		 */
+	}
 	// // here, we would process this data to achieve the desired result.
 	// const result = [
 	// 	{
