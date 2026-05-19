@@ -125,6 +125,11 @@ const convertToObjects = (ag) => {
 	return assignmentsObject;
 };
 
+const countDecimalPlaces = (grade) => {
+	if (Math.floor(grade) === grade) return 0;
+	return grade.toString().split('.')[1].length || 0;
+};
+
 function getLearnerData(course, ag, submissions) {
 	const isForSameCourse = isCourseIdMatched(course, ag);
 
@@ -132,7 +137,7 @@ function getLearnerData(course, ag, submissions) {
 		const filteredAssignments = groupDataByLid(submissions, ag);
 		const filteredAssignmentsObj = convertToObjects(AssignmentGroup);
 
-		let res = [];
+		let result = [];
 		for (let learner in filteredAssignments) {
 			let learnerObj = { id: Number(learner) };
 			let average = 0;
@@ -143,26 +148,22 @@ function getLearnerData(course, ag, submissions) {
 				let score = obj.submission.score;
 				let isLate =
 					new Date(obj.submission.submitted_at) > new Date(assignment.due_at);
-				// console.log(isLate);
 
 				if (isLate) score -= assignment.points_possible * 0.1;
 
-				learnerObj[assignment.id] = score / assignment.points_possible;
+				let assignmentGrade = score / assignment.points_possible;
+				if (countDecimalPlaces(assignmentGrade) > 3)
+					assignmentGrade = Number(assignmentGrade.toFixed(3));
+				learnerObj[assignment.id] = assignmentGrade;
 
 				average += score;
 				pointsPossible += assignment.points_possible;
-
-				// console.log(assignment);
-				// console.log('========================================');
-				// console.log(obj);
-
-				// break;
 			}
 			learnerObj['avg'] = average / pointsPossible;
-			console.log(learnerObj);
-
-			break;
+			result.push(learnerObj);
 		}
+
+		console.log(result);
 
 		/**
 		 * obj = {
