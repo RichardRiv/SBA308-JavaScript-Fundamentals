@@ -130,6 +130,18 @@ const countDecimalPlaces = (grade) => {
 	return grade.toString().split('.')[1].length || 0;
 };
 
+const formatDecimalGrade = (grade) => {
+	let decCount = countDecimalPlaces(grade);
+
+	if (decCount === 0) {
+		return Number(grade.toFixed(1));
+	} else if (decCount > 3) {
+		return Number(grade.toFixed(3));
+	} else {
+		return grade;
+	}
+};
+
 function getLearnerData(course, ag, submissions) {
 	const isForSameCourse = isCourseIdMatched(course, ag);
 
@@ -152,8 +164,7 @@ function getLearnerData(course, ag, submissions) {
 				if (isLate) score -= assignment.points_possible * 0.1;
 
 				let assignmentGrade = score / assignment.points_possible;
-				if (countDecimalPlaces(assignmentGrade) > 3)
-					assignmentGrade = Number(assignmentGrade.toFixed(3));
+				assignmentGrade = Number(formatDecimalGrade(assignmentGrade));
 				learnerObj[assignment.id] = assignmentGrade;
 
 				average += score;
