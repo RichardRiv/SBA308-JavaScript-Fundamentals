@@ -80,16 +80,10 @@ const isCourseIdMatched = (course, ag) => {
 	const courseId = course.id;
 	const agCourseId = ag.course_id;
 
-	try {
-		if (courseId === agCourseId) {
-			return true;
-		} else {
-			throw new Error(
-				'Assignment Group Course ID and Course Info ID do not match.',
-			);
-		}
-	} catch (err) {
-		console.log(err);
+	if (courseId !== agCourseId) {
+		throw new Error(
+			'Assignment Group Course ID and Course Info ID do not match.',
+		);
 	}
 };
 
@@ -122,6 +116,10 @@ const convertToObjects = (ag) => {
 		assignmentsObject[obj.id] = obj;
 	}
 
+	for (let key in assignmentsObject) {
+		delete assignmentsObject[key].name;
+	}
+
 	return assignmentsObject;
 };
 
@@ -152,20 +150,38 @@ const buildFinalResult = (filteredAssignments, filteredAssignmentsObj) => {
 
 		for (let obj of filteredAssignments[learner]) {
 			let assignment = filteredAssignmentsObj[obj.assignment_id];
+			let assignmentPtsPossible = assignment.points_possible;
 			let score = obj.submission.score;
-			let isLate =
-				new Date(obj.submission.submitted_at) > new Date(assignment.due_at);
 
-			if (isLate) score -= assignment.points_possible * 0.1;
+			if (assignmentPtsPossible === 0) continue;
+			try {
+				if (typeof assignmentPtsPossible === 'string')
+					throw new Error(
+						`Points possible for assignment ID${assignment.id} is not of type Number: ${assignmentPtsPossible}`,
+					);
+				if (typeof score === 'string')
+					throw new Error(
+						`Score for LearnerID${learner} is not of type Number: ${score}`,
+					);
 
-			let assignmentGrade = score / assignment.points_possible;
-			assignmentGrade = Number(formatDecimalGrade(assignmentGrade));
-			learnerObj[assignment.id] = assignmentGrade;
+				let isLate =
+					new Date(obj.submission.submitted_at) > new Date(assignment.due_at);
 
-			average += score;
-			pointsPossible += assignment.points_possible;
+				if (isLate) score -= assignmentPtsPossible * 0.1;
+
+				let assignmentGrade = score / assignmentPtsPossible;
+				assignmentGrade = formatDecimalGrade(assignmentGrade);
+				learnerObj[assignment.id] = assignmentGrade;
+
+				average += score;
+				pointsPossible += assignmentPtsPossible;
+			} catch (err) {
+				console.log(err.message);
+				continue;
+			}
 		}
-		learnerObj['avg'] = average / pointsPossible;
+		learnerObj['avg'] =
+			pointsPossible > 0 ? formatDecimalGrade(average / pointsPossible) : 0;
 		result.push(learnerObj);
 	}
 
@@ -173,14 +189,17 @@ const buildFinalResult = (filteredAssignments, filteredAssignmentsObj) => {
 };
 
 function getLearnerData(course, ag, submissions) {
-	const isForSameCourse = isCourseIdMatched(course, ag);
-
-	if (isForSameCourse) {
-		const filteredAssignments = groupDataByLid(submissions, ag);
-		const filteredAssignmentsObj = convertToObjects(AssignmentGroup);
-
-		return buildFinalResult(filteredAssignments, filteredAssignmentsObj);
+	try {
+		isCourseIdMatched(course, ag);
+	} catch (err) {
+		console.log(err.message);
+		return [];
 	}
+
+	const filteredAssignments = groupDataByLid(submissions, ag);
+	const filteredAssignmentsObj = convertToObjects(AssignmentGroup);
+
+	return buildFinalResult(filteredAssignments, filteredAssignmentsObj);
 }
 
 const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
