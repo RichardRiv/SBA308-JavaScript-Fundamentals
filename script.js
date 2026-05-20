@@ -92,8 +92,7 @@ const filterByPassedDueDate = (ag) => {
 	return ag.assignments.filter((obj) => date >= new Date(obj.due_at));
 };
 
-const groupDataByLid = (submissions, ag) => {
-	const filteredAssignments = filterByPassedDueDate(ag);
+const groupDataByLid = (submissions, filteredAssignments) => {
 	const rel = {};
 
 	for (let sub of submissions) {
@@ -108,8 +107,7 @@ const groupDataByLid = (submissions, ag) => {
 	return rel;
 };
 
-const convertToObjects = (ag) => {
-	const filteredAssignments = filterByPassedDueDate(ag);
+const convertToObjects = (filteredAssignments) => {
 	const assignmentsObject = {};
 
 	for (let obj of filteredAssignments) {
@@ -140,15 +138,15 @@ const formatDecimalGrade = (grade) => {
 	}
 };
 
-const buildFinalResult = (filteredAssignments, filteredAssignmentsObj) => {
+const buildFinalResult = (groupedData, filteredAssignmentsObj) => {
 	const result = [];
 
-	for (let learner in filteredAssignments) {
+	for (let learner in groupedData) {
 		let learnerObj = { id: Number(learner) };
 		let average = 0;
 		let pointsPossible = 0;
 
-		for (let obj of filteredAssignments[learner]) {
+		for (let obj of groupedData[learner]) {
 			let assignment = filteredAssignmentsObj[obj.assignment_id];
 			let assignmentPtsPossible = assignment.points_possible;
 			let score = obj.submission.score;
@@ -188,7 +186,7 @@ const buildFinalResult = (filteredAssignments, filteredAssignmentsObj) => {
 	return result;
 };
 
-function getLearnerData(course, ag, submissions) {
+const getLearnerData = (course, ag, submissions) => {
 	try {
 		isCourseIdMatched(course, ag);
 	} catch (err) {
@@ -196,11 +194,12 @@ function getLearnerData(course, ag, submissions) {
 		return [];
 	}
 
-	const filteredAssignments = groupDataByLid(submissions, ag);
-	const filteredAssignmentsObj = convertToObjects(AssignmentGroup);
+	const filteredAssignments = filterByPassedDueDate(ag);
+	const filteredAssignmentsObj = convertToObjects(filteredAssignments);
+	const groupedData = groupDataByLid(submissions, filteredAssignments);
 
-	return buildFinalResult(filteredAssignments, filteredAssignmentsObj);
-}
+	return buildFinalResult(groupedData, filteredAssignmentsObj);
+};
 
 const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
 console.log(result);
