@@ -126,6 +126,10 @@ const countDecimalPlaces = (grade) => {
 	return grade.toString().split('.')[1].length || 0;
 };
 
+const isAssignmentLate = (subDate, dueDate) => {
+	return new Date(subDate) > new Date(dueDate);
+};
+
 const formatDecimalGrade = (grade) => {
 	const decCount = countDecimalPlaces(grade);
 
@@ -162,8 +166,10 @@ const buildFinalResult = (groupedData, filteredAssignmentsObj) => {
 						`Score for LearnerID${learner} is not of type Number: ${score}`,
 					);
 
-				let isLate =
-					new Date(obj.submission.submitted_at) > new Date(assignment.due_at);
+				let isLate = isAssignmentLate(
+					obj.submission.submitted_at,
+					assignment.due_at,
+				);
 
 				if (isLate) score -= assignmentPtsPossible * 0.1;
 
